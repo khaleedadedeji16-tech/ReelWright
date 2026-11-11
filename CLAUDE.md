@@ -240,8 +240,9 @@ to apply SQL.** The owner runs the SQL by hand in the Supabase SQL Editor.
 
 People
 - `profiles` — one row per user (same id as `auth.users`): display name,
-  role, is_admin, time zone, plan, age_confirmed, id_check_status. Only
-  the ID check status is stored, never documents.
+  role, is_admin, time zone, plan, age_confirmed, age_confirmed_at,
+  id_check_status. Only the ID check status is stored, never documents.
+  `age_confirmed` is a self-declaration, not an ID check.
 
 Creative work
 - `files` — every uploaded or generated file. Stores only the storage key
@@ -295,7 +296,7 @@ credit wallet when someone signs up.
 
 | Table | User can |
 | --- | --- |
-| `profiles` | read own; update only display_name, role, time_zone, age_confirmed |
+| `profiles` | read own; update only display_name and time_zone |
 | `books`, `characters`, `projects`, `scenes` | read, add, change, delete own |
 | `personas` | read, add, change, delete own; never approval_status. Editing a persona sets it back to pending |
 | `scheduled_posts` | read, add, change, delete own content; status only draft or scheduled; not while posting. Never safety_status, post_url, error_message. Editing the file, caption or hashtags resets safety_status |
@@ -305,7 +306,8 @@ credit wallet when someone signs up.
 | the two `_secrets` tables | nothing |
 
 - Everything not in that table happens in **server code using
-  `createAdminClient()`**: is_admin, plan, id_check_status, all credit
+  `createAdminClient()`**: role (set once, in onboarding), age_confirmed,
+  age_confirmed_at, is_admin, plan, id_check_status, all credit
   changes, creating and updating jobs (status, cost, GPU seconds,
   credits), creating and deleting files, approvals, safety results,
   connecting GPUs and social accounts, and anything touching secrets.

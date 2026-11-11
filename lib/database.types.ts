@@ -539,6 +539,7 @@ export type Database = {
           id_check_status: Database["public"]["Enums"]["id_check_status"];
           created_at: string;
           updated_at: string;
+          age_confirmed_at: string | null;
         };
         Insert: {
           id: string;
@@ -551,6 +552,7 @@ export type Database = {
           id_check_status?: Database["public"]["Enums"]["id_check_status"];
           created_at?: string;
           updated_at?: string;
+          age_confirmed_at?: string | null;
         };
         Update: {
           id?: string;
@@ -563,6 +565,7 @@ export type Database = {
           id_check_status?: Database["public"]["Enums"]["id_check_status"];
           created_at?: string;
           updated_at?: string;
+          age_confirmed_at?: string | null;
         };
         Relationships: [];
       };
@@ -862,7 +865,9 @@ export type Database = {
         | "youtube"
         | "facebook"
         | "x"
-        | "fanvue";
+        | "fanvue"
+        | "linkedin"
+        | "reddit";
       user_role: "author" | "creator" | "fanvue";
       workflow_kind: "image" | "video_shot";
     };
