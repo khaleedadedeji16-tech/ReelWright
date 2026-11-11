@@ -25,6 +25,9 @@ setup) and step 2 (design system).
 - Supabase for database and login, via `@supabase/supabase-js` and
   `@supabase/ssr`
 - Hosted on Vercel, code on GitHub
+  - Live site: https://reel-wright.vercel.app (redeploys on every push to
+    `main`)
+  - Repository: https://github.com/khaleedadedeji16-tech/ReelWright
 - Package manager: npm
 
 Next.js 16 differs from older versions (see the note imported from
