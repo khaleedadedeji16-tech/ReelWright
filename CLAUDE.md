@@ -15,7 +15,7 @@ ComfyUI on RunPod, then schedule them to post on social platforms.
   dashboards filled with mock data.
 
 The app is built in 12 steps, one at a time. Done so far: step 1 (project
-setup) and step 2 (design system).
+setup), step 2 (design system) and step 3 (database).
 
 ## Tech stack
 
@@ -52,8 +52,15 @@ components/
   ui/                 small reusable pieces (buttons, cards)
   dashboard/          dashboard display components
 lib/
-  supabase/           Supabase client helpers (browser and server)
+  supabase/           Supabase client helpers (browser, server, admin)
   demo-data/          the ONLY place mock data may live
+  database.types.ts   TypeScript types that match the database
+supabase/
+  migrations/         numbered SQL files, in the order they must run
+  all-in-one.sql      every migration in one file (generated)
+  verify.sql          lists each table's security status
+scripts/
+  combine-migrations.mjs   builds all-in-one.sql (npm run db:combine)
 ```
 
 Folders in brackets, like `(marketing)`, are route groups: they organise
@@ -65,6 +72,8 @@ so git tracks them; delete it when the folder gets real files.
 - `lib/supabase/client.ts` — `createClient()` for Client Components.
 - `lib/supabase/server.ts` — `await createClient()` for Server Components,
   Server Functions and Route Handlers.
+- `lib/supabase/admin.ts` — `createAdminClient()`, server code only. Uses
+  the service role key and skips all row level security. See "Database".
 - `lib/supabase/env.ts` — reads the environment variables;
   `hasSupabaseEnv()` reports whether they are set without exposing them.
 
@@ -78,6 +87,8 @@ and in the Vercel project settings.
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` — secret, server only. Must never get the
+  `NEXT_PUBLIC_` prefix.
 
 When a later step needs a new variable, add it to `.env.example` with an
 empty value and list it here.
@@ -201,8 +212,119 @@ Also: `lib/cn.ts` — `cn()` joins class names.
   have an invisible 44px hit area.)
 - Icon-only buttons need an `aria-label`.
 
+## Database
+
+Supabase (Postgres). The schema lives in `supabase/migrations` as numbered
+SQL files. **Claude cannot reach the Supabase project and must never try
+to apply SQL.** The owner runs the SQL by hand in the Supabase SQL Editor.
+
+### Rules for database changes
+
+- **Every new table must turn on row level security and get its policies
+  and permissions (grants) in the same migration that creates it.**
+- Never edit a migration that has already been delivered. Add a new file
+  with the next number.
+- After adding a migration: run `npm run db:combine`, update
+  `lib/database.types.ts` to match, update the table list below, and tell
+  the owner exactly which file(s) to run.
+- Each table follows the same pattern: uuid `id`, `created_at`,
+  `updated_at` (kept current by the `set_updated_at` trigger), a `user_id`
+  owner column with an index, enums for fixed lists.
+- Permissions are explicit. Each migration first revokes everything from
+  `anon` and `authenticated`, then grants only what is needed. Signed-out
+  visitors (`anon`) have no access to any table.
+- No mock or sample rows in the database, ever (mock data lives in
+  `lib/demo-data` only).
+
+### Tables
+
+People
+- `profiles` — one row per user (same id as `auth.users`): display name,
+  role, is_admin, time zone, plan, age_confirmed, id_check_status. Only
+  the ID check status is stored, never documents.
+
+Creative work
+- `files` — every uploaded or generated file. Stores only the storage key
+  (files will live in Cloudflare R2; no Supabase storage buckets), plus
+  size, dimensions and safety_status.
+- `books` — an author's book, with links to manuscript and cover files.
+- `characters` — saved characters, optionally linked to a book.
+- `personas` — Fanvue personas, with an approval_status.
+- `projects` — one piece of work (trailer, clip, image post and so on),
+  optionally linked to a book and a persona.
+- `scenes` — the storyboard rows of a project, in `position` order.
+
+Generation
+- `workflow_templates` — ComfyUI workflows uploaded by the admin.
+- `jobs` — one generation job: status, GPU source, cost, credits.
+- `gpu_connections` — a user's own GPU setup (no secrets).
+
+Money
+- `credit_wallets` — one per user: `balance` (all credits owned, including
+  held) and `held` (reserved for running jobs). Available = balance - held.
+- `credit_transactions` — the ledger. `amount` is always positive and
+  `kind` says what happened. Rows are never edited or deleted.
+- Plans and subscriptions tables come in step 7. `profiles.plan` is plain
+  text until then.
+
+Publishing
+- `connected_accounts` — a user's linked social account (no secrets).
+- `scheduled_posts` — a post to publish: content, platforms, time, status.
+
+Secrets
+- `gpu_connection_secrets` — RunPod API keys.
+- `connected_account_secrets` — social login tokens.
+- Both have row level security on and **no policies at all**, so only
+  server code with the service role key can touch them. The values are
+  stored unencrypted for now; **encrypting them is step 8**. Do not store
+  real keys in them before then.
+
+A trigger on `auth.users` (`handle_new_user`) creates the profile and the
+credit wallet when someone signs up.
+
+### Security rules
+
+- Row level security is on for every table.
+- Users can read only their own rows. Admins can read every table except
+  the two secrets tables. Admin status is checked with
+  `public.is_admin()`, a security definer function, so policies do not
+  loop back on `profiles`.
+- A row may only link to things its owner owns (the `owns_file`,
+  `owns_book`, `owns_persona`, `owns_project` checks in the policies).
+- What a signed-in user can change directly from the browser:
+
+| Table | User can |
+| --- | --- |
+| `profiles` | read own; update only display_name, role, time_zone, age_confirmed |
+| `books`, `characters`, `projects`, `scenes` | read, add, change, delete own |
+| `personas` | read, add, change, delete own; never approval_status. Editing a persona sets it back to pending |
+| `scheduled_posts` | read, add, change, delete own content; status only draft or scheduled; not while posting. Never safety_status, post_url, error_message. Editing the file, caption or hashtags resets safety_status |
+| `gpu_connections`, `connected_accounts` | read own, delete own (disconnect) |
+| `files`, `jobs`, `credit_wallets`, `credit_transactions` | read own only |
+| `workflow_templates` | nothing (admins: everything) |
+| the two `_secrets` tables | nothing |
+
+- Everything not in that table happens in **server code using
+  `createAdminClient()`**: is_admin, plan, id_check_status, all credit
+  changes, creating and updating jobs (status, cost, GPU seconds,
+  credits), creating and deleting files, approvals, safety results,
+  connecting GPUs and social accounts, and anything touching secrets.
+- `createAdminClient()` skips every rule above. Use it only in server
+  code, only for those jobs, and always check who the signed-in user is
+  first with the normal server client.
+- Even the service role can only read and add ledger rows, not edit or
+  delete them.
+
+### TypeScript types
+
+`lib/database.types.ts` matches the schema exactly, in the shape the
+Supabase clients expect; all three client helpers are typed with it. Use
+`Tables<"books">`, `TablesInsert<"books">`, `TablesUpdate<"books">` and
+`Enums<"job_status">` in app code.
+
 ## Commands
 
 - `npm run dev` — start the local dev server
 - `npm run lint` — run the linter
 - `npm run build` — production build
+- `npm run db:combine` — rebuild `supabase/all-in-one.sql`

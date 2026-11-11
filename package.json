@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:combine": "node scripts/combine-migrations.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -14,7 +15,8 @@
     "next": "16.4.6",
     "next-themes": "^0.4.6",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
