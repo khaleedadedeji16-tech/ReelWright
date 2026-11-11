@@ -1,16 +1,17 @@
-import { hasSupabaseEnv } from "@/lib/supabase/env";
+import Link from "next/link";
+import { buttonStyles } from "@/components/ui/button";
 
 export default function HomePage() {
-  const supabaseReady = hasSupabaseEnv();
-
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-      <h1 className="text-4xl font-semibold tracking-tight">ReelWright</h1>
-      <p className="text-lg">Setup complete</p>
-      <p className="text-sm opacity-70">
-        Supabase environment variables:{" "}
-        {supabaseReady ? "present" : "missing"}
-      </p>
+      <h1 className="font-heading text-4xl font-semibold">ReelWright</h1>
+      <p className="text-lg text-muted">Setup complete</p>
+      <Link
+        href="/styleguide"
+        className={buttonStyles({ variant: "secondary", className: "mt-2" })}
+      >
+        View the style guide
+      </Link>
     </main>
   );
 }
