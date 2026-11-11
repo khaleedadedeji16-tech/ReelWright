@@ -50,6 +50,7 @@ const swatches: Array<{ name: string; pairedWith: string; classes: string }> = [
   { name: "surface", pairedWith: "text-muted", classes: "bg-surface text-muted" },
   { name: "border", pairedWith: "text", classes: "bg-border text-foreground" },
   { name: "border-strong", pairedWith: "text", classes: "bg-border-strong text-foreground" },
+  { name: "input-border", pairedWith: "surface (outline only)", classes: "bg-surface text-foreground border-4 border-input-border" },
   { name: "accent", pairedWith: "accent-contrast", classes: "bg-accent text-accent-contrast" },
   { name: "accent-soft", pairedWith: "accent-soft-text", classes: "bg-accent-soft text-accent-soft-text" },
   { name: "success-soft", pairedWith: "success-text", classes: "bg-success-soft text-success-text" },

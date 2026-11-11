@@ -15,6 +15,7 @@
   --text-muted: #5b6270;
   --border: #e2e5ea;
   --border-strong: #c9ced6;
+  --input-border: #8a919e;
   --accent: #3447d4;
   --accent-contrast: #ffffff;
   --accent-soft: #ebeefc;
@@ -41,6 +42,7 @@
   --text-muted: #a3abb8;
   --border: #2a2f38;
   --border-strong: #3a404b;
+  --input-border: #6b7280;
   --accent: #4f61e8;
   --accent-contrast: #ffffff;
   --accent-soft: #1e2550;
@@ -69,6 +71,7 @@
   --color-muted: var(--text-muted);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+  --color-input-border: var(--input-border);
   --color-accent: var(--accent);
   --color-accent-contrast: var(--accent-contrast);
   --color-accent-soft: var(--accent-soft);

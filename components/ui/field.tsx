@@ -3,7 +3,7 @@ import { cn } from "@/lib/cn";
 
 /** Shared look for Input, Textarea and Select. */
 export const controlStyles =
-  "w-full rounded-control border border-border-strong bg-surface px-3 text-sm text-foreground placeholder:text-muted disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger-text";
+  "w-full rounded-control border border-input-border bg-surface px-3 text-sm text-foreground placeholder:text-muted disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger-text";
 
 export function Label({
   className,

@@ -122,7 +122,8 @@ not be changed.
 | `text` | `text-foreground` | main text |
 | `text-muted` | `text-muted` | secondary text |
 | `border` | `border` (the default), `bg-border` | card and divider lines |
-| `border-strong` | `border-border-strong` | outlined buttons, inputs |
+| `border-strong` | `border-border-strong` | outlined buttons |
+| `input-border` | `border-input-border` | outline of Input, Textarea and Select (at least 3 to 1 against `surface`) |
 | `accent` | `bg-accent` | primary buttons, progress bars, focus ring |
 | `accent-contrast` | `text-accent-contrast` | text on accent |
 | `accent-soft` | `bg-accent-soft` | active menu item, info badge |
