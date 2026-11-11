@@ -5,8 +5,11 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChoiceCard } from "@/components/ui/choice-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Logo } from "@/components/ui/logo";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { requireAccess } from "@/lib/auth/session";
 
 // This page is only for checking the look. The sample labels on it are
 // placeholders, not app content.
@@ -30,15 +34,15 @@ export const metadata: Metadata = {
 };
 
 const navLinks = [
-  { href: "/styleguide#colours", label: "Colours" },
-  { href: "/styleguide#type", label: "Type" },
-  { href: "/styleguide#shape", label: "Shape and spacing" },
-  { href: "/styleguide#buttons", label: "Buttons" },
-  { href: "/styleguide#cards", label: "Cards and badges" },
-  { href: "/styleguide#forms", label: "Forms" },
-  { href: "/styleguide#tables", label: "Tables" },
-  { href: "/styleguide#feedback", label: "Progress and loading" },
-  { href: "/styleguide#shell", label: "App shell" },
+  { href: "/admin/styleguide#colours", label: "Colours" },
+  { href: "/admin/styleguide#type", label: "Type" },
+  { href: "/admin/styleguide#shape", label: "Shape and spacing" },
+  { href: "/admin/styleguide#buttons", label: "Buttons" },
+  { href: "/admin/styleguide#cards", label: "Cards and badges" },
+  { href: "/admin/styleguide#forms", label: "Forms" },
+  { href: "/admin/styleguide#tables", label: "Tables" },
+  { href: "/admin/styleguide#feedback", label: "Progress and loading" },
+  { href: "/admin/styleguide#shell", label: "App shell" },
 ];
 
 // Each swatch shows a background token with the text token used on top of it.
@@ -113,13 +117,14 @@ function Row({ children }: { children: ReactNode }) {
   return <div className="flex flex-wrap items-center gap-3">{children}</div>;
 }
 
-export default function StyleGuidePage() {
+export default async function StyleGuidePage() {
+  await requireAccess("/admin");
   return (
     <AppShell
       siteName="ReelWright"
       roleLabel="Sample role"
       navLinks={navLinks}
-      activeHref="/styleguide#colours"
+      activeHref="/admin/styleguide#colours"
       title="Style guide"
       subtitle="Every colour, text style and component, for checking light and dark mode."
       actions={
@@ -127,6 +132,11 @@ export default function StyleGuidePage() {
           <Button variant="secondary">Secondary action</Button>
           <Button>Primary action</Button>
         </>
+      }
+      sidebarAccount={
+        <Button variant="ghost" className="w-full justify-start px-3">
+          Account slot
+        </Button>
       }
       sidebarFooter={
         <Card>
@@ -198,6 +208,16 @@ export default function StyleGuidePage() {
                 </li>
               ))}
             </ul>
+          </Card>
+          <Card title="Logo">
+            <Row>
+              <Logo size={24} />
+              <Logo />
+              <Logo size={48} />
+              <span className="text-muted">
+                The site mark. Always shown next to the site name.
+              </span>
+            </Row>
           </Card>
           <Card title="Shadow">
             <div className="inline-flex h-16 items-center rounded-card bg-surface px-6 shadow-float">
@@ -317,6 +337,32 @@ export default function StyleGuidePage() {
                 label="Textarea with error"
                 defaultValue="Too short"
                 error="Write at least 20 characters."
+              />
+              <Checkbox label="Checkbox" />
+              <Checkbox label="Checkbox with error" error="You must tick this box." />
+            </div>
+          </Card>
+          <Card title="Choice cards">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <ChoiceCard
+                name="sample-choice"
+                value="one"
+                title="First choice"
+                description="One line saying what it is for."
+                defaultChecked
+              />
+              <ChoiceCard
+                name="sample-choice"
+                value="two"
+                title="Second choice"
+                description="One line saying what it is for."
+              />
+              <ChoiceCard
+                name="sample-choice"
+                value="three"
+                title="Disabled choice"
+                description="One line saying what it is for."
+                disabled
               />
             </div>
           </Card>

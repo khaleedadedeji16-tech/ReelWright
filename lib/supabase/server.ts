@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import type { Database } from "@/lib/database.types";
 import { getSupabaseEnv } from "./env";
 
@@ -8,6 +9,10 @@ import { getSupabaseEnv } from "./env";
  * Create a new one per request — do not store it in a module-level variable.
  */
 export async function createClient() {
+  // Login data must always be read fresh, at the moment of the request,
+  // and never as part of a page that Next.js prepares ahead of time.
+  await connection();
+
   const { url, anonKey } = getSupabaseEnv();
   const cookieStore = await cookies();
 

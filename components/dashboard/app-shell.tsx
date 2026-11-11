@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ChatIcon, CloseIcon, MenuIcon } from "@/components/ui/icons";
+import { Logo } from "@/components/ui/logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/cn";
 
@@ -22,6 +23,8 @@ export type AppShellProps = {
   activeHref?: string;
   /** Small info card at the bottom of the side menu. */
   sidebarFooter?: ReactNode;
+  /** Account actions at the bottom of the side menu (for example Log out). */
+  sidebarAccount?: ReactNode;
   /** Page heading. */
   title: string;
   subtitle?: string;
@@ -47,6 +50,7 @@ export function AppShell({
   navLinks,
   activeHref,
   sidebarFooter,
+  sidebarAccount,
   title,
   subtitle,
   actions,
@@ -86,7 +90,10 @@ export function AppShell({
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 flex-col items-start gap-2">
-            <span className="font-heading text-lg font-semibold">{siteName}</span>
+            <span className="flex items-center gap-2">
+              <Logo />
+              <span className="font-heading text-lg font-semibold">{siteName}</span>
+            </span>
             <Badge variant="info">{roleLabel}</Badge>
           </div>
           <button
@@ -126,6 +133,8 @@ export function AppShell({
 
         {sidebarFooter ? <div>{sidebarFooter}</div> : null}
 
+        {sidebarAccount ? <div className="border-t pt-4">{sidebarAccount}</div> : null}
+
         <div className="flex items-center justify-between gap-2 border-t pt-4">
           <span className="text-muted">Theme</span>
           <ThemeToggle />
@@ -144,6 +153,7 @@ export function AppShell({
           >
             <MenuIcon />
           </button>
+          <Logo size={24} />
           <span className="font-heading text-base font-semibold">{siteName}</span>
         </div>
 

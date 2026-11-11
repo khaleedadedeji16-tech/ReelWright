@@ -15,7 +15,8 @@ ComfyUI on RunPod, then schedule them to post on social platforms.
   dashboards filled with mock data.
 
 The app is built in 12 steps, one at a time. Done so far: step 1 (project
-setup), step 2 (design system) and step 3 (database).
+setup), step 2 (design system), step 3 (database) and step 4 (login and
+the role picker).
 
 ## Tech stack
 
@@ -36,22 +37,41 @@ using an API. `cacheComponents` is switched on in `next.config.ts`, so
 request-time data (for example `cookies()`, which the Supabase server
 client uses) must be read inside a `<Suspense>` boundary.
 
+Things learned the hard way in this version (keep doing them):
+
+- `lib/supabase/server.ts` calls `await connection()` first, so login data
+  is always read at request time. Do not remove it.
+- A server action must `redirect()` straight to the final page. Do not
+  redirect to a page that `proxy.ts` will redirect again: the browser
+  shows the right page under the wrong address.
+- A form with controlled radio buttons or selects must submit through an
+  `onSubmit` handler (see `app/onboarding/onboarding-form.tsx`), or the
+  browser clears the choices when the server returns an error.
+
 ## Folder structure
 
 ```
+proxy.ts              runs before every request: session refresh + access rules
 app/
+  icon.svg            the logo and browser tab icon (see "Design system")
   (marketing)/        public pages (the home page lives here)
-  (auth)/             login and sign-up
+  (auth)/             login, signup, forgot-password, reset-password,
+                      check-email (+ _components/ for their forms)
+  auth/callback/      where email links and Google sign-in come back to
+  onboarding/         the role picker, shown once after first login
   (dashboard)/
     author/           author dashboard
     creator/          content creator dashboard
     fanvue/           Fanvue creator dashboard
   admin/              admin area
     demo/             demo dashboards (mock data)
+    styleguide/       the style guide page
+  security-check/     TEMPORARY page; step 5 removes it
 components/
   ui/                 small reusable pieces (buttons, cards)
   dashboard/          dashboard display components
 lib/
+  auth/               access rules, session helpers, login actions
   supabase/           Supabase client helpers (browser, server, admin)
   demo-data/          the ONLY place mock data may live
   database.types.ts   TypeScript types that match the database
@@ -77,8 +97,7 @@ so git tracks them; delete it when the folder gets real files.
 - `lib/supabase/env.ts` — reads the environment variables;
   `hasSupabaseEnv()` reports whether they are set without exposing them.
 
-Session refresh on each request (Next.js `proxy.ts`) is not set up yet; it
-belongs with the login step.
+The login session is refreshed on every request by `proxy.ts`.
 
 ### Environment variables
 
@@ -89,6 +108,8 @@ and in the Vercel project settings.
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` — secret, server only. Must never get the
   `NEXT_PUBLIC_` prefix.
+- `NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN` — `true` shows the "Continue with
+  Google" button. Default `false`.
 
 When a later step needs a new variable, add it to `.env.example` with an
 empty value and list it here.
@@ -117,8 +138,13 @@ palette name) in a component.** Tailwind's built-in colour palette is
 switched off in `app/globals.css`, so classes like `bg-red-500` do not
 exist. If a design needs a colour or component that is not here, ask first.
 
-The style guide page at `/styleguide` shows everything in both modes. When
-a component is added or changed, update that page too.
+**The one exception is the logo file, `app/icon.svg`.** The colours
+written inside that one file are allowed. It is both the browser tab icon
+and the picture shown by the `Logo` component. Nothing else may contain
+colour values.
+
+The style guide page at `/admin/styleguide` (admins only) shows everything
+in both modes. When a component is added or changed, update that page too.
 
 ### Colour tokens
 
@@ -187,6 +213,12 @@ In `components/ui`:
 - `avatar.tsx` — `Avatar`, round, shows initials when there is no picture.
 - `empty-state.tsx` — `EmptyState` (title, one line of help, one action).
 - `skeleton.tsx` — `Skeleton` loading placeholder.
+- `checkbox.tsx` — `Checkbox` with a `label` and optional `error`.
+- `choice-card.tsx` — `ChoiceCard`, a large radio-button card for picking
+  one option from a few.
+- `logo.tsx` — `Logo`, the site mark. Always show the site name beside it.
+- `centered-page.tsx` — `CenteredPage`, logo on top and a centred column
+  (login pages, onboarding).
 - `theme-toggle.tsx` — `ThemeToggle`.
 - `theme-provider.tsx` — `ThemeProvider` (used once, in the root layout).
 - `icons.tsx` — the small set of line icons. Add new icons here.
@@ -194,11 +226,17 @@ In `components/ui`:
 In `components/dashboard`:
 
 - `app-shell.tsx` — `AppShell`, the frame for all three dashboards and the
-  admin area: side menu (site name, role badge, nav links, bottom info
-  card slot, theme toggle), page heading (title, subtitle, actions),
+  admin area: side menu (logo, site name, role badge, nav links, bottom
+  info card slot, `sidebarAccount` slot, theme toggle), page heading
+  (title, subtitle, actions),
   content, and the floating assistant button (does nothing yet). Everything
   it shows comes in as props; it must never contain role-specific content.
   Pass `activeHref` to highlight the current page's link.
+- `logout-button.tsx` — `LogoutButton`, goes in the `sidebarAccount` slot.
+- `protected-area.tsx` — `ProtectedArea`, wraps a protected layout and
+  runs the server-side access check (see "Auth and access").
+- `dashboard-placeholder.tsx` — `DashboardPlaceholder`, TEMPORARY. Step 5
+  replaces it with the real dashboards.
 
 Also: `lib/cn.ts` — `cn()` joins class names.
 
@@ -211,6 +249,74 @@ Also: `lib/cn.ts` — `cn()` joins class names.
 - Clickable targets are at least 44px tall. (Small buttons look 32px but
   have an invisible 44px hit area.)
 - Icon-only buttons need an `aria-label`.
+
+## Auth and access
+
+Login is Supabase Auth: email and password with email confirmation
+(password at least 8 characters), and optional Google sign-in behind
+`NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN`.
+
+### Who can open what
+
+The rules live in ONE function, `resolveAccess()` in `lib/auth/access.ts`.
+Change the rules there and nowhere else.
+
+- `/author`, `/creator`, `/fanvue`, `/admin`, `/onboarding` and
+  `/security-check` need a logged-in user. Otherwise: the login page, with
+  a `next` value so they return afterwards.
+- Logged in with no role: always sent to `/onboarding`.
+- Logged in with a role: `/onboarding` and the auth pages (`/login`,
+  `/signup`, `/forgot-password`, `/check-email`) send them to their own
+  dashboard. `/reset-password` is the exception: it stays open to any
+  logged-in user, because the emailed reset link logs them in first.
+- Opening another role's dashboard sends them to their own.
+- `/admin` and everything under it needs `is_admin`. Everyone else gets
+  the normal "not found" page (a real 404), so the admin area is not
+  revealed.
+- Admins may open all three dashboards. An admin's home is still the
+  dashboard of the role they picked.
+
+### Where the rules are applied (always both)
+
+1. `proxy.ts`, before the request reaches the page.
+2. On the server, inside every protected layout (`ProtectedArea`) AND at
+   the top of every protected page: `const viewer = await
+   requireAccess("/author")` from `lib/auth/session.ts`. Layouts alone are
+   not enough, so every new protected page must call `requireAccess`
+   itself. It also returns the logged-in user (`Viewer`).
+
+`getViewer()` (same file) returns the logged-in user or null. It asks
+Supabase to confirm the session rather than trusting the cookie.
+
+### How the role gets set
+
+- The database does not let users write `role`, `age_confirmed` or
+  `age_confirmed_at` (migration 0008).
+- `/onboarding` collects display name, time zone (pre-filled from the
+  browser) and one of the three roles. Fanvue creator requires ticking
+  "I confirm I am 18 or older."
+- `completeOnboarding` in `app/onboarding/actions.ts` (server code) checks
+  who is logged in, validates the form, then saves with the admin client
+  using an update that only matches while `role` is still empty. So a role
+  is set once and cannot be changed; changing it means contacting support.
+- For Fanvue it also sets `age_confirmed` and `age_confirmed_at`. This is
+  only a self-declaration. Real ID checks and adult content generation are
+  step 11 and stay locked until then.
+
+### Other auth rules
+
+- Error messages must never reveal whether an email has an account. Login
+  has one message for every failure; sign-up and forgot-password always
+  lead to the same "check your email" page.
+- Any "return to this page" value goes through `safeInternalPath()`
+  (`lib/auth/safe-path.ts`), which only accepts paths inside this site.
+- Messages chosen by the address (for example `/login?error=link`) come
+  from a fixed list. Never show text taken from the address.
+- All login actions are in `lib/auth/actions.ts`. `/auth/callback` handles
+  email links and Google.
+- **`/security-check` is temporary** (shows what the logged-in user can
+  read). **Step 5 removes it**, including its entry in
+  `lib/auth/access.ts` and this note.
 
 ## Database
 

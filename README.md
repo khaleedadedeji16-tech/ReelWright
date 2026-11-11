@@ -22,7 +22,8 @@ You need Node.js 20.9 or newer.
    ```
 
    Open `.env.local` and fill in your Supabase project URL, anon key and
-   service role key.
+   service role key. Leave `NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN` as `false`
+   unless Google sign-in is set up.
    This file is ignored by git; never commit real keys.
 
 3. Start the dev server:
